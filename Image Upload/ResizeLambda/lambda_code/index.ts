@@ -33,6 +33,11 @@ export const handler = async (event: S3Event) => {
             Bucket: bucket, 
             Key: key 
         }));
+
+        // Metadata keys are lowercase
+        const userId = getObj.Metadata?.userid;
+        const imageId = getObj.Metadata?.imageid;
+
         
         const imageBuffer = await streamToBuffer(getObj.Body as Readable);
 
@@ -59,11 +64,9 @@ export const handler = async (event: S3Event) => {
         }));
 
         // 3. Update DynamoDB item to status 'done' and set thumbnail keys
-        // Assume 'imageId' is the key in DynamoDB; for simplicity we use the S3 key as imageId
-        const imageId = key;
         const params = {
             TableName: process.env.DYNAMODB_TABLE, // set this env var in Lambda
-            Key: { userId: record.awsRegion, imageId: imageId }, // example key schema
+            Key: { userId: userId, imageId: imageId }, // example key schema
             UpdateExpression: "SET #st = :s, thumb200Key = :t200, thumb400Key = :t400",
             ExpressionAttributeNames: { "#st": "status" },
             ExpressionAttributeValues: {
