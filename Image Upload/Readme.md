@@ -59,3 +59,26 @@ I will use sam cli to create this lambda function
 7. keep the rest as default
 
 write the code, and build it.
+
+## Deploy Lambda in AWS
+1. In AWS Console, go to Lambda → Create function
+2. Author from scratch: name it ResizeImage , runtime Node.js 24.x. Choose the execution role you
+made ( LambdaResizeRole ).
+3. After creating, go to the Code section, click “Upload from” → “.zip file”, and upload
+4. In Configuration → Environment variables, add a variable DYNAMODB_TABLE function.zip.
+= the name of your Images table ( Images )
+5. Increase the timeout to 5 mins
+
+## Configure S3 Event to Trigger Lambda
+1. In S3 console, open your bucket, go to Properties.
+2. Scroll to Event notifications and click Create event notification.
+3. Name it (e.g. OnUploadResize ).
+4. Event types: check All object create events (or specifically s3:ObjectCreated:* ).
+5. Prefix: enter uploads/ (so only new files in that “folder” trigger it).
+6. Destination: choose Lambda function, select ResizeImage.
+7. Save and allow it to add needed permissions (S3 will get permission to invoke Lambda).
+
+
+Now the event-driven pipeline is set up: when the Next.js app uploads a file to uploads/ , S3 emits an
+ObjectCreated event, which calls our Lambda . The Lambda processes the image and updates
+DynamoDB. The front-end never waits on Lambda – it’s background processing.
