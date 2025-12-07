@@ -1,49 +1,69 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sam-app
+  Image Resize Lambda
 
-  Sample SAM Template for sam-app
-  
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+  Lambda function that resizes images on S3 upload
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name for image uploads
+  DynamoDBTableName:
+    Type: String
+    Description: DynamoDB table name for image metadata
+    Default: Images
+
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 60
+    MemorySize: 1024
 
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  ImageResizeFunction:
+    Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambda_code/
       Handler: index.handler
-      Runtime: nodejs22.x
+      Runtime: nodejs20.x
       Architectures:
         - x86_64
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DynamoDBTableName
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref S3BucketName
+        - S3WritePolicy:
+            BucketName: !Ref S3BucketName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBTableName
       Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        S3Upload:
+          Type: S3
           Properties:
-            Path: /hello
-            Method: get
-    Metadata: # Manage esbuild properties
+            Bucket: !Ref S3BucketName
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
+    Metadata:
       BuildMethod: esbuild
       BuildProperties:
-        Minify: true
+        Minify: false
         Target: "es2020"
         Sourcemap: true
         EntryPoints: 
         - index.ts
+        External:
+          - sharp
 
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  ImageResizeFunction:
+    Description: "Image Resize Lambda Function ARN"
+    Value: !GetAtt ImageResizeFunction.Arn
+  ImageResizeFunctionRole:
+    Description: "IAM Role for Image Resize Lambda Function"
+    Value: !GetAtt ImageResizeFunctionRole.Arn
