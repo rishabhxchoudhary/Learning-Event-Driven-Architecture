@@ -3,13 +3,15 @@
       "target": "es2020",
       "strict": true,
       "preserveConstEnums": true,
-      "noEmit": true,
+      "noEmit": false,
       "sourceMap": false,
-      "module":"es2015",
-      "moduleResolution":"bundler",
+      "module":"commonjs",
+      "moduleResolution":"node",
       "esModuleInterop": true, 
       "skipLibCheck": true,
       "forceConsistentCasingInFileNames": true,  
+      "outDir": ".",
+      "rootDir": "."
     },
     "exclude": ["node_modules", "**/*.test.ts"]
   }

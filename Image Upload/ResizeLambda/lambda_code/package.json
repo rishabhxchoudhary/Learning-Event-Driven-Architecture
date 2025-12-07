@@ -17,7 +17,7 @@
     "@aws-sdk/client-s3": "^3.946.0",
     "@aws-sdk/lib-dynamodb": "^3.946.0",
     "esbuild": "^0.14.14",
-    "sharp": "^0.34.5"
+    "jimp": "^0.22.12"
   },
   "devDependencies": {
     "@jest/globals": "^29.2.0",

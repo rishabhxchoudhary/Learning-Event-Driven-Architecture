@@ -2,7 +2,7 @@ import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { S3Event } from "aws-lambda";
-import sharp from "sharp";
+import Jimp from "jimp";
 import { Readable } from "stream";
 
 const s3 = new S3Client();
@@ -50,22 +50,28 @@ export const handler = async (event: S3Event) => {
         
         const imageBuffer = await streamToBuffer(getObj.Body as Readable);
 
-        // 2. Resize to 200px and 400px widths
+        // 2. Resize to 200px and 400px widths using Jimp
         const sizes = [200, 400];
         const originalFileName = key.split("/").pop(); // e.g. '12345-photo.jpg'
 
+        // Load image with Jimp
+        const image = await Jimp.read(imageBuffer);
+
         await Promise.all(sizes.map(async (size) => {
-            const resized = await sharp(imageBuffer)
-                .resize(size) // width = size, height auto
-                .jpeg({ quality: 80 }) // convert to JPEG
-                .toBuffer();
+            // Clone the image and resize
+            const resized = image.clone()
+                .resize(size, Jimp.AUTO) // width = size, height auto-calculated
+                .quality(80); // set JPEG quality
+
+            // Get buffer
+            const resizedBuffer = await resized.getBufferAsync(Jimp.MIME_JPEG);
 
             const thumbKey = `thumbnails/${size}/${originalFileName}`;
 
             await s3.send(new PutObjectCommand({
                 Bucket: bucket,
                 Key: thumbKey,
-                Body: resized,
+                Body: resizedBuffer,
                 ContentType: "image/jpeg",
             }));
 
