@@ -38,6 +38,15 @@ export const handler = async (event: S3Event) => {
         const userId = getObj.Metadata?.userid;
         const imageId = getObj.Metadata?.imageid;
 
+        console.log("S3 object metadata:", getObj.Metadata);
+        console.log("Extracted userId:", userId);
+        console.log("Extracted imageId:", imageId);
+
+        // Validate required metadata
+        if (!userId || !imageId) {
+            console.error("Missing required metadata - userId:", userId, "imageId:", imageId);
+            throw new Error(`Missing metadata: userId=${userId}, imageId=${imageId}`);
+        }
         
         const imageBuffer = await streamToBuffer(getObj.Body as Readable);
 
@@ -76,8 +85,16 @@ export const handler = async (event: S3Event) => {
             }
         };
 
-        await docClient.send(new UpdateCommand(params));
-        console.log("DynamoDB item updated to done.");
+        console.log("Updating DynamoDB with params:", JSON.stringify(params, null, 2));
+        
+        try {
+            await docClient.send(new UpdateCommand(params));
+            console.log("DynamoDB item updated to done.");
+        } catch (dynamoError) {
+            console.error("Failed to update DynamoDB:", dynamoError);
+            console.error("Update params were:", JSON.stringify(params, null, 2));
+            throw dynamoError;
+        }
     } catch (err) {
         console.error("Error processing file:", err);
         throw err;

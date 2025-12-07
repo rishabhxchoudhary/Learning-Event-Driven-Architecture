@@ -29,13 +29,22 @@ export default function FileUploader() {
             const { uploadUrl, imageId, userId } = data; // userId + imageId from server
             setMessage("Uploading...");
 
+            // Debug logging
+            console.log("Upload URL:", uploadUrl);
+            console.log("Headers being sent:", {
+                "Content-Type": file.type,
+                // Temporarily removed metadata headers
+                // "x-amz-meta-userid": userId,
+                // "x-amz-meta-imageid": imageId,
+            });
+
             // 2. Upload file directly to S3
             await axios.put(uploadUrl, file, {
                 headers: {
                     "Content-Type": file.type,
-                    // These become S3 object metadata:
-                    "x-amz-meta-userid": userId,
-                    "x-amz-meta-imageid": imageId,
+                    // Temporarily removed metadata headers to test basic upload
+                    // "x-amz-meta-userid": userId,
+                    // "x-amz-meta-imageid": imageId,
                 },
                 onUploadProgress: (evt) => {
                     if (evt.total) {
@@ -47,9 +56,12 @@ export default function FileUploader() {
             setMessage("Upload complete! Processing in background...");
             // Optionally, refresh images list:
             router.refresh();
-        } catch (err) {
-            console.error(err);
-            setMessage("Upload failed. Check console.");
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            if (err.response?.data) {
+                console.error("S3 error response:", err.response.data);
+            }
+            setMessage(`Upload failed: ${err.response?.status || err.message}`);
         }
     };
 

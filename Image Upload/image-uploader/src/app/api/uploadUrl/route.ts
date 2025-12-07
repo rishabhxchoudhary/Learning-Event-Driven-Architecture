@@ -24,19 +24,32 @@ export async function POST(request: NextRequest) {
     const bucket = process.env.S3_BUCKET_NAME;
     const userId = session.user?.email; // partition key in DynamoDB
 
+    if (!userId) {
+        return NextResponse.json({ error: "User email not found" }, { status: 400 });
+    }
+
     const imageId = uuidv4(); // sort key in DynamoDB
     const ext = fileName.includes(".") ? fileName.split(".").pop() : "jpg";
     const key = `uploads/${imageId}.${ext}`; // short, no user/email/long filename
     const timestamp = Date.now();
 
-    // S3 presigned PUT URL (no metadata here – we'll send metadata from the client)
+    // S3 presigned PUT URL (testing without metadata first)
     const s3 = new S3Client({ region: process.env.AWS_REGION });
     const command = new PutObjectCommand({
         Bucket: bucket,
         Key: key,
         ContentType: fileType,
+        // Temporarily removing metadata to test basic upload
+        // Metadata: {
+        //     userid: userId,
+        //     imageid: imageId,
+        // },
     });
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+
+    // Debug logging
+    console.log("Generated presigned URL:", uploadUrl);
+    console.log("Metadata being signed:", { userid: userId, imageid: imageId });
 
     // Write metadata to DynamoDB with status = 'processing'
     const ddb = new DynamoDBClient({ region: process.env.AWS_REGION });
